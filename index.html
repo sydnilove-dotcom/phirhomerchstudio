@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phi Sigma Rho Merch Board</title>
+    <link rel="canonical" href="https://www.phirhomerchstudio.love/">
+    <meta property="og:url" content="https://www.phirhomerchstudio.love/">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="#top" aria-label="Phi Sigma Rho merch home">
+          <span class="brand-mark">ΦΣΡ</span>
+          <span>Merch Studio</span>
+        </a>
+        <div class="nav-links">
+          <a href="#suggest">Suggest</a>
+          <a href="#shop">Shop</a>
+          <a href="#admin">Admin</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-content">
+          <p class="eyebrow">Phi Sigma Rho</p>
+          <h1>Together we build the cutest chapter closet.</h1>
+          <p class="hero-copy">A shared merch board for sisterhood ideas, interest checks, sizes, and admin billing totals.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="#shop">View merch</a>
+            <a class="button secondary" href="#suggest">Drop an idea</a>
+          </div>
+        </div>
+        <div class="hero-panel" aria-label="Sorority pride highlights">
+          <div class="crest-card">
+            <span class="crest-star">✦</span>
+            <span class="crest-letters">ΦΣΡ</span>
+            <span class="crest-pyramid"></span>
+          </div>
+          <div class="values">
+            <span>Friendship</span>
+            <span>Scholarship</span>
+            <span>Encouragement</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section band" id="suggest">
+        <div class="section-heading">
+          <p class="eyebrow">Anonymous idea board</p>
+          <h2>Suggest merch, links, photos, or comments.</h2>
+        </div>
+        <form class="idea-form" id="ideaForm">
+          <label>
+            Suggestion
+            <textarea id="ideaText" rows="4" placeholder="Pink embroidered crewneck with silver ΦΣΡ letters..." required></textarea>
+          </label>
+          <div class="form-grid">
+            <label>
+              Image URL
+              <input id="ideaImage" type="url" placeholder="https://...">
+            </label>
+            <label>
+              Product/link URL
+              <input id="ideaLink" type="url" placeholder="https://...">
+            </label>
+          </div>
+          <button class="button primary" type="submit">Add anonymously</button>
+        </form>
+        <div class="idea-list" id="ideaList" aria-live="polite"></div>
+      </section>
+
+      <section class="section" id="shop">
+        <div class="section-heading split">
+          <div>
+            <p class="eyebrow">Chapter merch</p>
+            <h2>Vote yes, choose your size, and get on the list.</h2>
+          </div>
+          <div class="summary-pill"><span id="totalInterest">0</span> total yes votes</div>
+        </div>
+        <div class="merch-grid" id="merchGrid"></div>
+      </section>
+
+      <section class="section admin-section" id="admin">
+        <div class="section-heading">
+          <p class="eyebrow">Admin only</p>
+          <h2>Upload merch and review GreekBill-ready totals.</h2>
+        </div>
+
+        <div class="admin-login" id="adminLogin">
+          <label>
+            Admin passcode
+            <input id="adminCode" type="password" placeholder="Try: phirho">
+          </label>
+          <button class="button primary" id="unlockAdmin" type="button">Unlock admin</button>
+        </div>
+
+        <div class="admin-dashboard hidden" id="adminDashboard">
+          <form class="admin-form" id="merchForm">
+            <h3>Add merch item</h3>
+            <div class="form-grid">
+              <label>
+                Item name
+                <input id="merchName" type="text" placeholder="Orchid Pearl Crewneck" required>
+              </label>
+              <label>
+                Price
+                <input id="merchPrice" type="number" min="0" step="0.01" placeholder="38.00" required>
+              </label>
+            </div>
+            <label>
+              Description
+              <textarea id="merchDescription" rows="3" placeholder="Wine red crewneck with silver thread and orchid sleeve detail." required></textarea>
+            </label>
+            <div class="form-grid">
+              <label>
+                Merch file
+                <input id="merchFile" type="file" accept="image/*,.pdf,application/pdf">
+              </label>
+              <label>
+                Sizes
+                <input id="merchSizes" type="text" value="XS, S, M, L, XL, XXL">
+              </label>
+            </div>
+            <button class="button primary" type="submit">Publish merch</button>
+          </form>
+
+          <div class="ledger-panel">
+            <div class="ledger-header">
+              <h3>Admin billing list</h3>
+              <button class="button secondary" id="downloadCsv" type="button">Download CSV</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Item</th>
+                    <th>Size</th>
+                    <th>GreekBill</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="ledgerBody"></tbody>
+              </table>
+            </div>
+            <p class="admin-note">Real GreekBill charging requires a secure backend plus GreekBill API or export access. This page creates the admin-only list those charges would come from.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Built by Sydni Fullilove for Phi Sigma Rho merchandise planning</span>
+    </footer>
+
+    <template id="ideaTemplate">
+      <article class="idea-card">
+        <div class="idea-media"></div>
+        <p></p>
+        <a target="_blank" rel="noreferrer">View link</a>
+      </article>
+    </template>
+
+    <template id="merchTemplate">
+      <article class="merch-card">
+        <div class="merch-image"></div>
+        <div class="merch-body">
+          <a class="asset-link hidden" target="_blank" rel="noreferrer">View uploaded file</a>
+          <div class="merch-title-row">
+            <h3></h3>
+            <span class="price"></span>
+          </div>
+          <p class="description"></p>
+          <form class="interest-form">
+            <div class="choice-row">
+              <label class="check-option"><input type="radio" name="want" value="yes" required> Yes</label>
+              <label class="check-option"><input type="radio" name="want" value="maybe"> Maybe</label>
+              <label class="check-option"><input type="radio" name="want" value="no"> No</label>
+            </div>
+            <div class="form-grid compact">
+              <label>
+                Name
+                <input name="name" type="text" placeholder="Your name" required>
+              </label>
+              <label>
+                Size
+                <select name="size" required></select>
+              </label>
+            </div>
+            <label>
+              GreekBill account/email
+              <input name="greekbill" type="text" placeholder="name@email.com or account id">
+            </label>
+            <button class="button secondary" type="submit">Save response</button>
+          </form>
+          <p class="interest-count"></p>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
