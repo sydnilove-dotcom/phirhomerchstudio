@@ -131,7 +131,7 @@ function renderMerchAsset(imageElement, linkElement, item) {
   if (asset?.type?.startsWith("image/")) {
     imageElement.style.backgroundImage = `url("${asset.dataUrl}")`;
     linkElement.href = asset.dataUrl;
-    linkElement.textContent = `View ${asset.name}`;
+    linkElement.textContent = "Click here to expand image";
     linkElement.classList.remove("hidden");
     return;
   }
@@ -140,7 +140,7 @@ function renderMerchAsset(imageElement, linkElement, item) {
     imageElement.style.backgroundImage = "";
     imageElement.classList.add("pdf-preview");
     linkElement.href = asset.dataUrl;
-    linkElement.textContent = `View ${asset.name}`;
+    linkElement.textContent = "Click here to expand image";
     linkElement.classList.remove("hidden");
     return;
   }
