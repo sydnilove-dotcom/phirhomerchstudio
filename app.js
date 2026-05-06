@@ -209,6 +209,7 @@ function renderMerch() {
         want: formData.get("want"),
         name: formData.get("name").trim(),
         size: formData.get("size"),
+        quantity: Number(formData.get("quantity")),
         greekbill: formData.get("greekbill").trim(),
         createdAt: new Date().toISOString()
       };
@@ -232,14 +233,16 @@ function renderLedger() {
 
   if (!billable.length) {
     const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="5">No yes responses yet.</td>`;
+    row.innerHTML = `<td colspan="6">No yes responses yet.</td>`;
     ledgerBody.append(row);
     return;
   }
 
   billable.forEach((response) => {
     const row = document.createElement("tr");
-    [response.name, response.itemName, response.size, response.greekbill || "Needs account", money(response.price)].forEach((value) => {
+    const quantity = response.quantity || 1;
+    const amount = response.price * quantity;
+    [response.name, response.itemName, response.size, quantity, response.greekbill || "Needs account", money(amount)].forEach((value) => {
       const cell = document.createElement("td");
       cell.textContent = value;
       row.append(cell);
@@ -250,10 +253,13 @@ function renderLedger() {
 
 function downloadCsv() {
   const rows = [
-    ["Name", "Item", "Size", "GreekBill", "Amount"],
+    ["Name", "Item", "Size", "Quantity", "GreekBill", "Amount"],
     ...responses
       .filter((response) => response.want === "yes")
-      .map((response) => [response.name, response.itemName, response.size, response.greekbill, response.price])
+      .map((response) => {
+        const quantity = response.quantity || 1;
+        return [response.name, response.itemName, response.size, quantity, response.greekbill, response.price * quantity];
+      })
   ];
   const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
