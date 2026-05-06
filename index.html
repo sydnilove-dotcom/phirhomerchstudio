@@ -96,7 +96,7 @@
         <div class="admin-login" id="adminLogin">
           <label>
             Admin passcode
-            <input id="adminCode" type="password" placeholder="Try: phirho">
+            <input id="adminCode" type="password">
           </label>
           <button class="button primary" id="unlockAdmin" type="button">Unlock admin</button>
         </div>
@@ -164,8 +164,10 @@
     <template id="ideaTemplate">
       <article class="idea-card">
         <div class="idea-media"></div>
+        <span class="status-pill hidden">Archived</span>
         <p></p>
         <a target="_blank" rel="noreferrer">View link</a>
+        <div class="idea-admin-actions hidden"></div>
       </article>
     </template>
 

@@ -384,7 +384,46 @@ textarea {
 }
 
 .idea-card {
+  position: relative;
   padding: 14px;
+}
+
+.idea-card.archived {
+  opacity: 0.68;
+}
+
+.status-pill {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--wine);
+  background: rgba(255, 250, 240, 0.9);
+  border: 1px solid var(--line);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.idea-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button.tiny {
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+}
+
+.button.danger {
+  color: #8f1532;
+  background: #fff2f5;
+  border: 1px solid rgba(143, 21, 50, 0.22);
 }
 
 .idea-media,

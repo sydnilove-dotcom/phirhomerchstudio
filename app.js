@@ -7,14 +7,18 @@ const maxUploadBytes = 2.5 * 1024 * 1024;
 
 const seedIdeas = [
   {
+    id: "pearl-tote-bag",
     text: "Pearl-toned tote bag with a wine red ΦΣΡ monogram and tiny orchid charm.",
     image: "",
-    link: "https://www.phisigmarho.org/"
+    link: "https://www.phisigmarho.org/",
+    archived: false
   },
   {
+    id: "silver-star-pajama-shorts",
     text: "Silver star pajama shorts for chapter retreats.",
     image: "",
-    link: ""
+    link: "",
+    archived: false
   }
 ];
 
@@ -83,6 +87,7 @@ const write = (key, value) => {
 let ideas = read(storageKeys.ideas, seedIdeas);
 let merch = read(storageKeys.merch, seedMerch);
 let responses = read(storageKeys.responses, []);
+let adminUnlocked = false;
 
 const ideaList = document.querySelector("#ideaList");
 const merchGrid = document.querySelector("#merchGrid");
@@ -148,14 +153,27 @@ function renderIdeas() {
   const template = document.querySelector("#ideaTemplate");
   ideaList.replaceChildren();
 
-  ideas.forEach((idea) => {
+  ideas
+    .filter((idea) => adminUnlocked || !idea.archived)
+    .forEach((idea) => {
     const node = template.content.cloneNode(true);
+    const card = node.querySelector(".idea-card");
     const media = node.querySelector(".idea-media");
+    const status = node.querySelector(".status-pill");
     const paragraph = node.querySelector("p");
     const link = node.querySelector("a");
+    const adminActions = node.querySelector(".idea-admin-actions");
+    const ideaId = idea.id || createId();
+
+    if (!idea.id) {
+      idea.id = ideaId;
+      write(storageKeys.ideas, ideas);
+    }
 
     media.style.backgroundImage = `url("${idea.image || fallbackImage(idea.text)}")`;
     paragraph.textContent = idea.text;
+    card.classList.toggle("archived", Boolean(idea.archived));
+    status.classList.toggle("hidden", !idea.archived);
 
     if (idea.link) {
       link.href = idea.link;
@@ -163,8 +181,38 @@ function renderIdeas() {
       link.remove();
     }
 
+    if (adminUnlocked) {
+      const archiveButton = document.createElement("button");
+      archiveButton.className = "button secondary tiny";
+      archiveButton.type = "button";
+      archiveButton.textContent = idea.archived ? "Unarchive" : "Archive";
+      archiveButton.addEventListener("click", () => {
+        ideas = ideas.map((saved) => saved.id === ideaId ? { ...saved, archived: !saved.archived } : saved);
+        write(storageKeys.ideas, ideas);
+        renderIdeas();
+      });
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "button danger tiny";
+      deleteButton.type = "button";
+      deleteButton.textContent = "Delete";
+      deleteButton.addEventListener("click", () => {
+        const shouldDelete = confirm("Delete this suggestion permanently?");
+        if (!shouldDelete) {
+          return;
+        }
+
+        ideas = ideas.filter((saved) => saved.id !== ideaId);
+        write(storageKeys.ideas, ideas);
+        renderIdeas();
+      });
+
+      adminActions.classList.remove("hidden");
+      adminActions.append(archiveButton, deleteButton);
+    }
+
     ideaList.append(node);
-  });
+    });
 }
 
 function renderMerch() {
@@ -274,9 +322,11 @@ function downloadCsv() {
 document.querySelector("#ideaForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const idea = {
+    id: createId(),
     text: document.querySelector("#ideaText").value.trim(),
     image: document.querySelector("#ideaImage").value.trim(),
-    link: document.querySelector("#ideaLink").value.trim()
+    link: document.querySelector("#ideaLink").value.trim(),
+    archived: false
   };
   ideas.unshift(idea);
   write(storageKeys.ideas, ideas);
@@ -293,6 +343,8 @@ document.querySelector("#unlockAdmin").addEventListener("click", () => {
 
   document.querySelector("#adminLogin").classList.add("hidden");
   document.querySelector("#adminDashboard").classList.remove("hidden");
+  adminUnlocked = true;
+  renderIdeas();
 });
 
 document.querySelector("#merchForm").addEventListener("submit", async (event) => {
