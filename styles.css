@@ -414,6 +414,11 @@ textarea {
   gap: 8px;
 }
 
+.merch-admin-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .button.tiny {
   min-height: 36px;
   padding: 8px 12px;
@@ -584,6 +589,11 @@ td {
 
 th {
   color: var(--wine-deep);
+}
+
+.ledger-input {
+  min-width: 92px;
+  padding: 9px 10px;
 }
 
 .footer {

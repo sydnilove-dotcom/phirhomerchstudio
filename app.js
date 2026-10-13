@@ -231,13 +231,45 @@ function renderMerch() {
     const form = node.querySelector(".interest-form");
     const count = node.querySelector(".interest-count");
     const yesCount = responses.filter((response) => response.itemId === item.id && response.want === "yes").length;
+    const itemId = item.id || createId();
 
-    card.dataset.id = item.id;
+    if (!item.id) {
+      item.id = itemId;
+      write(storageKeys.merch, merch);
+    }
+
+    card.dataset.id = itemId;
     renderMerchAsset(image, assetLink, item);
     title.textContent = item.name;
     price.textContent = money(item.price);
     description.textContent = item.description;
     count.textContent = `${yesCount} sister${yesCount === 1 ? "" : "s"} marked yes`;
+
+    if (adminUnlocked) {
+      const adminActions = document.createElement("div");
+      adminActions.className = "merch-admin-actions";
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "button danger tiny";
+      deleteButton.type = "button";
+      deleteButton.textContent = "Delete merch";
+      deleteButton.addEventListener("click", () => {
+        const shouldDelete = confirm(`Delete "${item.name}" and its saved billing responses?`);
+        if (!shouldDelete) {
+          return;
+        }
+
+        merch = merch.filter((saved) => saved.id !== itemId);
+        responses = responses.filter((response) => response.itemId !== itemId);
+        write(storageKeys.merch, merch);
+        write(storageKeys.responses, responses);
+        renderMerch();
+        renderLedger();
+      });
+
+      adminActions.append(deleteButton);
+      node.querySelector(".merch-body").append(adminActions);
+    }
 
     item.sizes.forEach((size) => {
       const option = document.createElement("option");
@@ -251,7 +283,7 @@ function renderMerch() {
       const formData = new FormData(form);
       const response = {
         id: createId(),
-        itemId: item.id,
+        itemId,
         itemName: item.name,
         price: item.price,
         want: formData.get("want"),
@@ -262,7 +294,7 @@ function renderMerch() {
         createdAt: new Date().toISOString()
       };
 
-      responses = responses.filter((saved) => !(saved.itemId === item.id && saved.name.toLowerCase() === response.name.toLowerCase()));
+      responses = responses.filter((saved) => !(saved.itemId === itemId && saved.name.toLowerCase() === response.name.toLowerCase()));
       responses.unshift(response);
       write(storageKeys.responses, responses);
       renderMerch();
@@ -275,38 +307,120 @@ function renderMerch() {
   totalInterest.textContent = responses.filter((response) => response.want === "yes").length;
 }
 
+function updateResponse(responseId, updates) {
+  responses = responses.map((response) => response.id === responseId ? { ...response, ...updates } : response);
+  write(storageKeys.responses, responses);
+}
+
+function createLedgerInput({ type = "text", value, label, onChange, min, step }) {
+  const input = document.createElement("input");
+  input.className = "ledger-input";
+  input.type = type;
+  input.value = value;
+  input.setAttribute("aria-label", label);
+
+  if (min !== undefined) {
+    input.min = min;
+  }
+
+  if (step !== undefined) {
+    input.step = step;
+  }
+
+  input.addEventListener("input", () => onChange(input));
+  input.addEventListener("change", () => onChange(input));
+  return input;
+}
+
 function renderLedger() {
   const billable = responses.filter((response) => response.want === "yes");
   ledgerBody.replaceChildren();
 
   if (!billable.length) {
     const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="6">No yes responses yet.</td>`;
+    row.innerHTML = `<td colspan="7">No yes responses yet.</td>`;
     ledgerBody.append(row);
     return;
   }
 
   billable.forEach((response) => {
     const row = document.createElement("tr");
+    const responseId = response.id || createId();
+
+    if (!response.id) {
+      response.id = responseId;
+      write(storageKeys.responses, responses);
+    }
+
     const quantity = response.quantity || 1;
-    const amount = response.price * quantity;
-    [response.name, response.itemName, response.size, quantity, response.greekbill || "Needs account", money(amount)].forEach((value) => {
+    const price = Number(response.price) || 0;
+    const amountCell = document.createElement("td");
+    const updateAmount = () => {
+      const saved = responses.find((item) => item.id === responseId) || response;
+      amountCell.textContent = money((Number(saved.price) || 0) * (Number(saved.quantity) || 1));
+    };
+
+    const nameCell = document.createElement("td");
+    nameCell.append(createLedgerInput({
+      value: response.name || "",
+      label: "Billing name",
+      onChange: (input) => updateResponse(responseId, { name: input.value.trim() })
+    }));
+
+    const quantityCell = document.createElement("td");
+    quantityCell.append(createLedgerInput({
+      type: "number",
+      value: quantity,
+      label: "Billing quantity",
+      min: "1",
+      step: "1",
+      onChange: (input) => {
+        const nextQuantity = Math.max(1, Number(input.value) || 1);
+        input.value = nextQuantity;
+        updateResponse(responseId, { quantity: nextQuantity });
+        updateAmount();
+      }
+    }));
+
+    const priceCell = document.createElement("td");
+    priceCell.append(createLedgerInput({
+      type: "number",
+      value: price.toFixed(2),
+      label: "Billing item price",
+      min: "0",
+      step: "0.01",
+      onChange: (input) => {
+        const nextPrice = Math.max(0, Number(input.value) || 0);
+        input.value = nextPrice.toFixed(2);
+        updateResponse(responseId, { price: nextPrice });
+        updateAmount();
+      }
+    }));
+
+    row.append(nameCell);
+
+    [response.itemName, response.size, response.greekbill || "Needs account"].forEach((value) => {
       const cell = document.createElement("td");
       cell.textContent = value;
       row.append(cell);
     });
+
+    row.insertBefore(quantityCell, row.children[3]);
+    row.append(priceCell, amountCell);
+    updateAmount();
     ledgerBody.append(row);
   });
 }
 
 function downloadCsv() {
   const rows = [
-    ["Name", "Item", "Size", "Quantity", "GreekBill", "Amount"],
+    ["Name", "Item", "Size", "Quantity", "GreekBill", "Price", "Amount"],
     ...responses
       .filter((response) => response.want === "yes")
       .map((response) => {
         const quantity = response.quantity || 1;
-        return [response.name, response.itemName, response.size, quantity, response.greekbill, response.price * quantity];
+        const price = Number(response.price) || 0;
+        return [response.name, response.itemName, response.size, quantity, response.greekbill, price, price * quantity];
       })
   ];
   const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
@@ -345,6 +459,7 @@ document.querySelector("#unlockAdmin").addEventListener("click", () => {
   document.querySelector("#adminDashboard").classList.remove("hidden");
   adminUnlocked = true;
   renderIdeas();
+  renderMerch();
 });
 
 document.querySelector("#merchForm").addEventListener("submit", async (event) => {
