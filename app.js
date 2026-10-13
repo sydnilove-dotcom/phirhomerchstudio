@@ -109,9 +109,38 @@ function normalizeIdea(idea) {
   };
 }
 
+function normalizeMerchItem(item) {
+  const sizes = Array.isArray(item.sizes)
+    ? item.sizes
+    : String(item.sizes || "").split(",");
+
+  return {
+    id: item.id || createId(),
+    name: String(item.name || "").trim(),
+    price: Number(item.price) || 0,
+    description: String(item.description || "").trim(),
+    image: String(item.image || "").trim(),
+    asset: item.asset || null,
+    sizes: sizes.map((size) => String(size).trim()).filter(Boolean)
+  };
+}
+
+function prepareSharedMerchItem(item) {
+  const sharedItem = normalizeMerchItem(item);
+
+  if (sharedItem.asset?.type?.startsWith("image/") && sharedItem.asset.dataUrl.length < 45000) {
+    sharedItem.image = sharedItem.asset.dataUrl;
+  }
+
+  return {
+    ...sharedItem,
+    asset: null
+  };
+}
+
 async function requestSharedIdeas(action, payload = {}) {
   if (!sharedIdeasEndpoint) {
-    throw new Error("Shared suggestions are not configured yet.");
+    throw new Error("Shared storage is not configured yet.");
   }
 
   const response = await fetch(sharedIdeasEndpoint, {
@@ -123,7 +152,7 @@ async function requestSharedIdeas(action, payload = {}) {
   });
 
   if (!response.ok) {
-    throw new Error("The shared suggestion board could not be reached.");
+    throw new Error("The shared storage could not be reached.");
   }
 
   return response.status === 204 ? null : response.json();
@@ -146,9 +175,33 @@ async function loadSharedIdeas() {
   renderIdeas();
 }
 
+async function loadSharedMerch() {
+  if (!sharedIdeasEndpoint) {
+    renderMerch();
+    return;
+  }
+
+  try {
+    const sharedMerch = await requestSharedIdeas("merch:list");
+    merch = Array.isArray(sharedMerch)
+      ? sharedMerch.map(normalizeMerchItem).filter((item) => item.name)
+      : [];
+    write(storageKeys.merch, merch);
+  } catch (error) {
+    console.warn(error.message);
+  }
+
+  renderMerch();
+}
+
 async function saveSharedIdea(idea) {
   const savedIdea = await requestSharedIdeas("create", { idea });
   return normalizeIdea(savedIdea || idea);
+}
+
+async function saveSharedMerch(item) {
+  const savedItem = await requestSharedIdeas("merch:create", { item: prepareSharedMerchItem(item) });
+  return normalizeMerchItem(savedItem || item);
 }
 
 async function updateSharedIdea(ideaId, updates) {
@@ -157,6 +210,10 @@ async function updateSharedIdea(ideaId, updates) {
 
 async function deleteSharedIdea(ideaId) {
   await requestSharedIdeas("delete", { id: ideaId });
+}
+
+async function deleteSharedMerch(merchId) {
+  await requestSharedIdeas("merch:delete", { id: merchId });
 }
 
 function readFileAsDataUrl(file) {
@@ -331,7 +388,7 @@ function renderMerch() {
       deleteButton.className = "button danger tiny";
       deleteButton.type = "button";
       deleteButton.textContent = "Delete merch";
-      deleteButton.addEventListener("click", () => {
+      deleteButton.addEventListener("click", async () => {
         const shouldDelete = confirm(`Delete "${item.name}" and its saved billing responses?`);
         if (!shouldDelete) {
           return;
@@ -343,6 +400,14 @@ function renderMerch() {
         write(storageKeys.responses, responses);
         renderMerch();
         renderLedger();
+
+        try {
+          await deleteSharedMerch(itemId);
+        } catch (error) {
+          if (sharedIdeasEndpoint) {
+            alert(error.message);
+          }
+        }
       });
 
       adminActions.append(deleteButton);
@@ -604,15 +669,25 @@ document.querySelector("#merchForm").addEventListener("submit", async (event) =>
     asset,
     sizes: document.querySelector("#merchSizes").value.split(",").map((size) => size.trim()).filter(Boolean)
   };
-  merch.unshift(item);
-  write(storageKeys.merch, merch);
-  event.target.reset();
-  document.querySelector("#merchSizes").value = "XS, S, M, L, XL, XXL";
-  renderMerch();
+
+  try {
+    const savedItem = sharedIdeasEndpoint ? await saveSharedMerch(item) : item;
+    merch.unshift(savedItem);
+    write(storageKeys.merch, merch);
+    event.target.reset();
+    document.querySelector("#merchSizes").value = "XS, S, M, L, XL, XXL";
+    renderMerch();
+
+    if (!sharedIdeasEndpoint) {
+      alert("This merch item was saved on this device. Add the Google Apps Script URL in config.js to make new merch visible to everyone.");
+    }
+  } catch (error) {
+    alert(error.message);
+  }
 });
 
 document.querySelector("#downloadCsv").addEventListener("click", downloadCsv);
 
 loadSharedIdeas();
-renderMerch();
+loadSharedMerch();
 renderLedger();
