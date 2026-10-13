@@ -1,0 +1,1 @@
+window.PSR_SHARED_IDEAS_ENDPOINT = "";
