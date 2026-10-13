@@ -4,6 +4,7 @@ const storageKeys = {
   responses: "psr_merch_responses"
 };
 const maxUploadBytes = 2.5 * 1024 * 1024;
+const sharedIdeasEndpoint = (window.PSR_SHARED_IDEAS_ENDPOINT || "").replace(/\/$/, "");
 
 const seedIdeas = [
   {
@@ -98,6 +99,66 @@ function money(amount) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
 }
 
+function normalizeIdea(idea) {
+  return {
+    id: idea.id || createId(),
+    text: String(idea.text || "").trim(),
+    image: String(idea.image || "").trim(),
+    link: String(idea.link || "").trim(),
+    archived: Boolean(idea.archived)
+  };
+}
+
+async function requestSharedIdeas(action, payload = {}) {
+  if (!sharedIdeasEndpoint) {
+    throw new Error("Shared suggestions are not configured yet.");
+  }
+
+  const response = await fetch(sharedIdeasEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify({ action, ...payload })
+  });
+
+  if (!response.ok) {
+    throw new Error("The shared suggestion board could not be reached.");
+  }
+
+  return response.status === 204 ? null : response.json();
+}
+
+async function loadSharedIdeas() {
+  if (!sharedIdeasEndpoint) {
+    renderIdeas();
+    return;
+  }
+
+  try {
+    const sharedIdeas = await requestSharedIdeas("list");
+    ideas = Array.isArray(sharedIdeas) ? sharedIdeas.map(normalizeIdea).filter((idea) => idea.text) : [];
+    write(storageKeys.ideas, ideas);
+  } catch (error) {
+    console.warn(error.message);
+  }
+
+  renderIdeas();
+}
+
+async function saveSharedIdea(idea) {
+  const savedIdea = await requestSharedIdeas("create", { idea });
+  return normalizeIdea(savedIdea || idea);
+}
+
+async function updateSharedIdea(ideaId, updates) {
+  await requestSharedIdeas("update", { id: ideaId, updates });
+}
+
+async function deleteSharedIdea(ideaId) {
+  await requestSharedIdeas("delete", { id: ideaId });
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -186,17 +247,26 @@ function renderIdeas() {
       archiveButton.className = "button secondary tiny";
       archiveButton.type = "button";
       archiveButton.textContent = idea.archived ? "Unarchive" : "Archive";
-      archiveButton.addEventListener("click", () => {
-        ideas = ideas.map((saved) => saved.id === ideaId ? { ...saved, archived: !saved.archived } : saved);
+      archiveButton.addEventListener("click", async () => {
+        const archived = !idea.archived;
+        ideas = ideas.map((saved) => saved.id === ideaId ? { ...saved, archived } : saved);
         write(storageKeys.ideas, ideas);
         renderIdeas();
+
+        try {
+          await updateSharedIdea(ideaId, { archived });
+        } catch (error) {
+          if (sharedIdeasEndpoint) {
+            alert(error.message);
+          }
+        }
       });
 
       const deleteButton = document.createElement("button");
       deleteButton.className = "button danger tiny";
       deleteButton.type = "button";
       deleteButton.textContent = "Delete";
-      deleteButton.addEventListener("click", () => {
+      deleteButton.addEventListener("click", async () => {
         const shouldDelete = confirm("Delete this suggestion permanently?");
         if (!shouldDelete) {
           return;
@@ -205,6 +275,14 @@ function renderIdeas() {
         ideas = ideas.filter((saved) => saved.id !== ideaId);
         write(storageKeys.ideas, ideas);
         renderIdeas();
+
+        try {
+          await deleteSharedIdea(ideaId);
+        } catch (error) {
+          if (sharedIdeasEndpoint) {
+            alert(error.message);
+          }
+        }
       });
 
       adminActions.classList.remove("hidden");
@@ -466,7 +544,7 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-document.querySelector("#ideaForm").addEventListener("submit", (event) => {
+document.querySelector("#ideaForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const idea = {
     id: createId(),
@@ -475,10 +553,20 @@ document.querySelector("#ideaForm").addEventListener("submit", (event) => {
     link: document.querySelector("#ideaLink").value.trim(),
     archived: false
   };
-  ideas.unshift(idea);
-  write(storageKeys.ideas, ideas);
-  event.target.reset();
-  renderIdeas();
+
+  try {
+    const savedIdea = sharedIdeasEndpoint ? await saveSharedIdea(idea) : idea;
+    ideas.unshift(savedIdea);
+    write(storageKeys.ideas, ideas);
+    event.target.reset();
+    renderIdeas();
+
+    if (!sharedIdeasEndpoint) {
+      alert("This suggestion was saved on this device. Add the Google Apps Script URL in config.js to make new suggestions visible to everyone.");
+    }
+  } catch (error) {
+    alert(error.message);
+  }
 });
 
 document.querySelector("#unlockAdmin").addEventListener("click", () => {
@@ -525,6 +613,6 @@ document.querySelector("#merchForm").addEventListener("submit", async (event) =>
 
 document.querySelector("#downloadCsv").addEventListener("click", downloadCsv);
 
-renderIdeas();
+loadSharedIdeas();
 renderMerch();
 renderLedger();
