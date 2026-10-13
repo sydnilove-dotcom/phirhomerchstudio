@@ -1,1 +1,1 @@
-window.PSR_SHARED_IDEAS_ENDPOINT = "https://script.google.com/u/0/home/projects/1qAgsbztnReBI7q1Aiti856RD0iy5aa3931VYLFgr4I-gZbS6f5-1NdB9/edit";
+window.PSR_SHARED_IDEAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwAklZTQ6GWf_nZbaEqfH9nHWNlbT9uq3fp2jJQbjkD31pTB9JTLYMt2GNoAz7UxtS6/exec";
