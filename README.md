@@ -22,9 +22,9 @@ Your free site URL will look like:
 
 `https://sydnilove-dotcom.github.io/phirhomerchstudio/`
 
-## Shared Anonymous Suggestions
+## Shared Site Data
 
-The idea board needs Google Sheets storage so anonymous suggestions are visible to everyone.
+The site needs Google Sheets storage so anonymous suggestions and admin-published merch are visible to everyone.
 
 1. Create a Google Sheet.
 2. Copy the Sheet ID from its URL.
@@ -40,4 +40,4 @@ The idea board needs Google Sheets storage so anonymous suggestions are visible 
 window.PSR_SHARED_IDEAS_ENDPOINT = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
 ```
 
-After that, new suggestions submitted by non-admin visitors are saved in the Sheet and loaded for everyone who opens the website.
+After that, new suggestions submitted by non-admin visitors and new merch published by admins are saved in the Sheet and loaded for everyone who opens the website.
