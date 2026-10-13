@@ -312,7 +312,7 @@ function updateResponse(responseId, updates) {
   write(storageKeys.responses, responses);
 }
 
-function createLedgerInput({ type = "text", value, label, onChange, min, step }) {
+function createLedgerInput({ type = "text", value, label, onChange, min, step, placeholder }) {
   const input = document.createElement("input");
   input.className = "ledger-input";
   input.type = type;
@@ -327,6 +327,10 @@ function createLedgerInput({ type = "text", value, label, onChange, min, step })
     input.step = step;
   }
 
+  if (placeholder) {
+    input.placeholder = placeholder;
+  }
+
   input.addEventListener("input", () => onChange(input));
   input.addEventListener("change", () => onChange(input));
   return input;
@@ -338,7 +342,7 @@ function renderLedger() {
 
   if (!billable.length) {
     const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="7">No yes responses yet.</td>`;
+    row.innerHTML = `<td colspan="8">No yes responses yet.</td>`;
     ledgerBody.append(row);
     return;
   }
@@ -360,53 +364,82 @@ function renderLedger() {
       amountCell.textContent = money((Number(saved.price) || 0) * (Number(saved.quantity) || 1));
     };
 
-    const nameCell = document.createElement("td");
-    nameCell.append(createLedgerInput({
-      value: response.name || "",
-      label: "Billing name",
-      onChange: (input) => updateResponse(responseId, { name: input.value.trim() })
-    }));
+    const cells = [
+      createLedgerInput({
+        value: response.name || "",
+        label: "Billing name",
+        onChange: (input) => updateResponse(responseId, { name: input.value.trim() })
+      }),
+      createLedgerInput({
+        value: response.itemName || "",
+        label: "Billing item name",
+        onChange: (input) => updateResponse(responseId, { itemName: input.value.trim() })
+      }),
+      createLedgerInput({
+        value: response.size || "",
+        label: "Billing size",
+        onChange: (input) => updateResponse(responseId, { size: input.value.trim() })
+      }),
+      createLedgerInput({
+        type: "number",
+        value: quantity,
+        label: "Billing quantity",
+        min: "1",
+        step: "1",
+        onChange: (input) => {
+          const nextQuantity = Math.max(1, Number(input.value) || 1);
+          input.value = nextQuantity;
+          updateResponse(responseId, { quantity: nextQuantity });
+          updateAmount();
+        }
+      }),
+      createLedgerInput({
+        value: response.greekbill || "",
+        label: "Billing GreekBill account",
+        placeholder: "Needs account",
+        onChange: (input) => updateResponse(responseId, { greekbill: input.value.trim() })
+      }),
+      createLedgerInput({
+        type: "number",
+        value: price.toFixed(2),
+        label: "Billing item price",
+        min: "0",
+        step: "0.01",
+        onChange: (input) => {
+          const nextPrice = Math.max(0, Number(input.value) || 0);
+          input.value = nextPrice.toFixed(2);
+          updateResponse(responseId, { price: nextPrice });
+          updateAmount();
+        }
+      })
+    ];
 
-    const quantityCell = document.createElement("td");
-    quantityCell.append(createLedgerInput({
-      type: "number",
-      value: quantity,
-      label: "Billing quantity",
-      min: "1",
-      step: "1",
-      onChange: (input) => {
-        const nextQuantity = Math.max(1, Number(input.value) || 1);
-        input.value = nextQuantity;
-        updateResponse(responseId, { quantity: nextQuantity });
-        updateAmount();
-      }
-    }));
-
-    const priceCell = document.createElement("td");
-    priceCell.append(createLedgerInput({
-      type: "number",
-      value: price.toFixed(2),
-      label: "Billing item price",
-      min: "0",
-      step: "0.01",
-      onChange: (input) => {
-        const nextPrice = Math.max(0, Number(input.value) || 0);
-        input.value = nextPrice.toFixed(2);
-        updateResponse(responseId, { price: nextPrice });
-        updateAmount();
-      }
-    }));
-
-    row.append(nameCell);
-
-    [response.itemName, response.size, response.greekbill || "Needs account"].forEach((value) => {
+    cells.forEach((input) => {
       const cell = document.createElement("td");
-      cell.textContent = value;
+      cell.append(input);
       row.append(cell);
     });
 
-    row.insertBefore(quantityCell, row.children[3]);
-    row.append(priceCell, amountCell);
+    const actionsCell = document.createElement("td");
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "button danger tiny";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Delete";
+    deleteButton.setAttribute("aria-label", `Delete billing row for ${response.name || response.itemName || "this response"}`);
+    deleteButton.addEventListener("click", () => {
+      const shouldDelete = confirm("Delete this response from the billing list?");
+      if (!shouldDelete) {
+        return;
+      }
+
+      responses = responses.filter((saved) => saved.id !== responseId);
+      write(storageKeys.responses, responses);
+      renderMerch();
+      renderLedger();
+    });
+    actionsCell.append(deleteButton);
+
+    row.append(amountCell, actionsCell);
     updateAmount();
     ledgerBody.append(row);
   });
